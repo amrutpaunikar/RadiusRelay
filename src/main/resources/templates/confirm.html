@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Message Submitted Successfully</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #e0f7fa;
+            color: #00796b;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .success-container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 30px;
+            width: 80%;
+            max-width: 600px;
+            text-align: center;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .success-container h1 {
+            color: #388e3c;
+        }
+
+        .success-container p {
+            font-size: 18px;
+            color: #004d40;
+        }
+
+        .coordinates {
+            font-size: 16px;
+            color: #004d40;
+            font-weight: bold;
+        }
+
+        .btn-back {
+            margin-top: 20px;
+            background-color: #00796b;
+            color: #ffffff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .btn-back:hover {
+            background-color: #004d40;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="success-container">
+        <h1>Success!</h1>
+        <p>Your message has been submitted successfully.</p>
+
+        <div>
+            <h4>Message Details:</h4>
+            <p th:text="'Message: ' + ${message}">Message</p>
+        </div>
+
+        <div class="coordinates">
+            <h4>Location:</h4>
+            <p th:text="'Latitude: ' + ${latitude} + ', Longitude: ' + ${longitude}">Coordinates</p>
+        </div>
+
+        <button onclick="window.location.href='/forntend'" class="btn-back">Back to Weather</button>
+    </div>
+
+</body>
+</html>

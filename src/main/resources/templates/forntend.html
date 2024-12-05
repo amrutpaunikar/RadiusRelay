@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Weather Forecast</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            overflow-x: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        .weather-container {
+            padding: 20px;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin: 20px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        #coordinates {
+            margin-top: 10px;
+            color: lightyellow;
+            font-size: 16px;
+        }
+
+        #map {
+            height: 300px;
+            width: 100%;
+            margin-top: 20px;
+            border-radius: 10px;
+            display: none; /* Initially hidden */
+        }
+
+        .message-box {
+            margin-top: 20px;
+        }
+
+        .message-box textarea {
+            width: 100%;
+            border-radius: 5px;
+            padding: 10px;
+            resize: vertical;
+        }
+
+        .forecast {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .forecast-day {
+            text-align: center;
+            color: white;
+            flex: 1;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            margin: 0 5px;
+        }
+
+        .forecast-day img {
+            width: 40px;
+            height: 40px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container weather-container text-center">
+        <!-- Search Bar -->
+        <form th:action="@{/forntend}" method="post" class="col-md-10 m-auto py-4" id="weatherForm">
+            <div class="input-group mb-3">
+                <input id="city-name" name="city" type="text" class="form-control" placeholder="Enter a location for Weather ..." th:value="${city}">
+                <div class="input-group-append">
+                    <button type="submit" class="btn btn-danger">Search</button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Conditionally Displayed Weather Section -->
+        <div th:if="${current != null}">
+            <div class="weather-status">
+                <img th:src="${current.icon_num != null ? '/images/' + current.icon_num + '.png' : '/images/default.png'}" alt="Weather Icon">
+                <h1 th:text="${city}">City Name</h1>
+                <h3><span th:text="${current.temperature}">Temp</span>&deg;C</h3>
+                <h1 class="lead" th:text="${current.summary}">Weather</h1>
+            </div>
+
+            <!-- 7-Day Forecast Section -->
+            <div class="forecast">
+                <div class="forecast-day" th:each="day, iterStat : ${dailyData}">
+                    <h5 th:text="'Day ' + ${iterStat.index + 1}">Day X</h5>
+                    <img th:src="@{'/images/' + ${day.icon} + '.png'}" alt="Forecast Icon">
+                    <p th:text="${day.temperatureMin + '°C'}">Min Temp</p>
+                    <p th:text="${day.temperatureMax + '°C'}">Max Temp</p>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- Coordinates, Map Toggle Button, Map, and Message Box -->
+        <div class="d-flex align-items-center">
+            <p id="coordinates" class="mb-2 col-md-10">Fetching coordinates...</p>
+            <button onclick="toggleMap()" class="btn btn-info btn-sm ml-3">Show Map</button>
+        </div>
+        <div id="map"></div>
+
+        <form th:action="@{/submitMessage}" method="post" id="messageForm">
+            <!-- Hidden fields for message and coordinates -->
+            <input type="hidden" id="message" name="message">
+            <input type="hidden" id="latitude" name="latitude">
+            <input type="hidden" id="longitude" name="longitude">
+            <hr>
+
+            <div class="message-box d-flex align-items-center">
+                <textarea class="col-md-10" id="userMessage" rows="3" placeholder="Enter your message here..."></textarea>
+                <button type="submit" class="btn btn-info btn-sm ml-3">Submit</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Google Maps JavaScript API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCUxFzRwkdqei8xOYZa57QspSWqw8hgVYk&callback=initMap" async defer></script>
+    <script>
+        let map;
+        let marker;
+        let mapVisible = false;
+        let latitude, longitude;
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const weatherForm = document.getElementById("weatherForm");
+            const cityInput = document.getElementById("city-name");
+            const coordinatesDisplay = document.getElementById("coordinates");
+            const messageInput = document.getElementById("userMessage");
+            const messageForm = document.getElementById("messageForm");
+
+            // Function to update coordinates
+            function updateCoordinates() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            latitude = position.coords.latitude;
+                            longitude = position.coords.longitude;
+                            coordinatesDisplay.innerText = `Your Location Coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                            if (mapVisible) {
+                                initMap(); // Initialize map after location is retrieved
+                            }
+                        },
+                        (error) => {
+                            coordinatesDisplay.innerText = "Unable to retrieve location.";
+                            latitude = 0;  // Default to 0 if location is not retrieved
+                            longitude = 0; // Default to 0 if location is not retrieved
+                        }
+                    );
+                } else {
+                    coordinatesDisplay.innerText = "Geolocation not supported by this browser.";
+                    latitude = 0;  // Default to 0 if geolocation is not supported
+                    longitude = 0; // Default to 0 if geolocation is not supported
+                }
+            }
+
+            updateCoordinates();
+            setInterval(updateCoordinates, 45000);
+
+            // Handle the weather form submission
+            weatherForm.addEventListener("submit", function (event) {
+                // Prevent submission if city is not entered
+                if (cityInput.value.trim() === "") {
+                    event.preventDefault();
+                    alert("Please enter a city name!");
+                }
+
+                // Ensure latitude and longitude are populated
+                if (!latitude || !longitude || latitude === 0 || longitude === 0) {
+                    event.preventDefault();
+                    alert("Unable to retrieve location. Please allow location access.");
+                }
+            });
+
+            // Handle the message form submission independently
+            messageForm.addEventListener("submit", function (event) {
+                // Capture the message and coordinates before submitting
+                const message = messageInput.value.trim();
+                if (message) {
+                    document.getElementById("message").value = message;
+                    document.getElementById("latitude").value = latitude;
+                    document.getElementById("longitude").value = longitude;
+                } else {
+                    event.preventDefault();
+                    alert("Please enter a message!");
+                }
+            });
+        });
+
+        // Initialize Google Map
+        function initMap() {
+            if (latitude && longitude) {
+                const location = { lat: latitude, lng: longitude };
+                map = new google.maps.Map(document.getElementById("map"), {
+                    center: location,
+                    zoom: 15,
+                });
+
+                if (marker) {
+                    marker.setMap(null);
+                }
+
+                marker = new google.maps.Marker({
+                    position: location,
+                    map: map,
+                    title: "You are here",
+                });
+            }
+        }
+
+        // Toggle the visibility of the map
+        function toggleMap() {
+            mapVisible = !mapVisible;
+            document.getElementById("map").style.display = mapVisible ? "block" : "none";
+            if (mapVisible && !map) {
+                initMap();  // Initialize map if not already done
+            }
+        }
+    </script>
+
+</body>
+</html>
